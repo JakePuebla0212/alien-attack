@@ -1,1 +1,10 @@
 .vscode/launch.json
+__pycache__/Alien.cpython-36.pyc
+__pycache__/Utility.cpython-36.pyc
+__pycache__/Bomb.cpython-36.pyc
+__pycache__/Explosion.cpython-36.pyc
+__pycache__/GameLevel.cpython-36.pyc
+__pycache__/Player.cpython-36.pyc
+__pycache__/PlayerLives.cpython-36.pyc
+__pycache__/Score.cpython-36.pyc
+__pycache__/Shot.cpython-36.pyc

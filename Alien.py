@@ -46,15 +46,17 @@ class Alien(pygame.sprite.Sprite):
         if not self.SCREENRECT.contains(self.rect):
             # the alien has gone off screen,
             # let's make it come back on screen
-            self.x_velocity = -self.x_velocity
+            self.x_velocity = self.x_velocity * -1
 
             # let's drop the alien by the height of one alien
             # image to get closer to tank
-            self.rect.top = self.rect.bottom + 1
+            if(self.rect.y < 450):                
+                self.rect.top = self.rect.bottom + 1
+
 
             # this adds alien space ship rectangle back into rectangle \
             # SCREENRECT
-            self.rect = self.rect.clamp(self.SCREENRECT)
+            self.rect = self.rect.clamp(self.SCREENRECT)  
 
         self.frame = self.frame + 1
 
