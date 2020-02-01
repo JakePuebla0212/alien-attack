@@ -20,11 +20,14 @@ if not pygame.image.get_extended():
 
 MAX_SHOTS = 2
 ALIEN_ODDS = 22
-BOMB_ODDS = 60
+BLACK = (0, 0, 0)
+BOMB_ODDS = 80
 ALIEN_RELOAD = 12
-SCREENRECT = Rect(0, 0, 1024, 768)
+DISPLAY_WIDTH = 1024
+DISPLAY_HEIGHT = 768
+SCREENRECT = Rect(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT)
 
-main_directory = os.path.split(os.path.abspath(__file__))[0]
+main_directory = os.path.split(os.path.abspath(__file__))[0] 
 
 
 def main(winstyle=0):
@@ -64,16 +67,21 @@ def main(winstyle=0):
     bombs = pygame.sprite.Group()
 
     all_game_rects = pygame.sprite.RenderUpdates()
-    last_alien = pygame.sprite.GroupSingle()
+
+    
+    
 
     Player.containers = all_game_rects
-    Alien.containers = aliens, all_game_rects, last_alien
+    Alien.containers = aliens, all_game_rects
     Shot.containers = shots, all_game_rects
     Bomb.containers = bombs, all_game_rects
     Explosion.containers = all_game_rects
     Score.containers = all_game_rects
+    Score.score_points = 0
     PlayerLives.containers = all_game_rects
+    PlayerLives.lives = 5
     GameLevel.containers = all_game_rects
+    GameLevel.level = 1
 
     Alien(SCREENRECT)
 
@@ -82,14 +90,18 @@ def main(winstyle=0):
         all_game_rects.add(PlayerLives())
         all_game_rects.add(GameLevel())
 
-    game_loop(all_game_rects, screen, background, shots, last_alien, aliens, bombs, winstyle, bestdepth, FULLSCREEN)
+    clock = game_loop(all_game_rects, screen, background, shots, aliens, bombs, winstyle, bestdepth, FULLSCREEN)
 
+    game_over(screen, clock)
+
+
+def quit_game():
     if (pygame.mixer is not None):
         pygame.mixer.music.fadeout(1000)
 
-    pygame.time.wait(1000)
+        pygame.time.wait(1000)
 
-    pygame.quit()
+        pygame.quit()
 
 def set_game_sound():
     if pygame.mixer and not pygame.mixer.get_init():
@@ -105,7 +117,81 @@ def set_game_sound():
 
         pygame.mixer.music.play(-1)
 
-def game_loop(all_game_rects, screen, background, shots, last_alien, aliens, bombs, winstyle, bestdepth, FULLSCREEN):
+
+def text_objects(text, font):
+    textSurface = font.render(text, True, BLACK)
+
+    return textSurface, textSurface.get_rect()
+
+def button(screen, msg, x, y, w, h, ic, ac, action=None):
+    mouse = pygame.mouse.get_pos()
+    click = pygame.mouse.get_pressed()
+
+    print(click)
+
+    if x+w > mouse[0] > x and y+h > mouse[1] > y:
+        pygame.draw.rect(screen, ac, (x, y, w, h))
+
+        if click[0] == 1 and action is not None:
+            action()
+    else:
+        pygame.draw.rect(screen, ic, (x, y, w, h))
+
+    smallText = pygame.font.SysFont("comicsansms", 20)
+    textSurf, textRect = text_objects(msg, smallText)
+    textRect.center = ((x+(w/2), (y+(h/2))))
+
+    screen.blit(textSurf, textRect)
+
+def game_over(screen, clock):
+    bright_red = (255, 0, 0)
+    bright_green = (0, 255, 0)
+    green = (77, 206, 30)
+    white = (255, 255, 255)
+    red = (255, 0, 0)
+    is_game_over = True
+
+    pygame.mouse.set_visible(1)
+
+    while is_game_over is True:
+        for event in pygame.event.get():
+            print(event)
+            if event.type == pygame.QUIT:
+                quit_game()
+
+        screen.fill(white)
+
+        largeText = pygame.font.Font('freesansbold.ttf', 115)
+        TextSurf, TextRect = text_objects("Game Over", largeText)
+        TextRect.center = ((DISPLAY_WIDTH/2), (DISPLAY_HEIGHT/2))
+        screen.blit(TextSurf, TextRect)
+
+        score_text = "Score:" + str(Score.score_points)
+
+        scoreSurf, scoreRect = text_objects(score_text, largeText)
+
+        scoreRect.center = ((DISPLAY_WIDTH/4), (DISPLAY_HEIGHT/4))
+        
+        screen.blit(scoreSurf, scoreRect)
+
+        level_text = "Level:" + str(GameLevel.level)
+
+        levelSurf, levelRect = text_objects(level_text, largeText)
+
+        levelRect.center = ((DISPLAY_WIDTH * .75), (DISPLAY_HEIGHT/4))
+        
+        screen.blit(levelSurf, levelRect)
+
+        mouse = pygame.mouse.get_pos()
+
+        button(screen, "Start Over", 150, 450, 100, 50, green, bright_green, main)
+
+        button(screen, "Quit", 550, 450, 100, 50, red, bright_red, quit_game)
+
+        pygame.display.update()
+        clock.tick(15)
+
+def game_loop(all_game_rects, screen, background, shots, aliens, bombs, winstyle, bestdepth, FULLSCREEN):
 
     clock = pygame.time.Clock()
     player = Player(SCREENRECT)
@@ -115,6 +201,8 @@ def game_loop(all_game_rects, screen, background, shots, last_alien, aliens, bom
     boom_sound = Utility.load_sound("boom.wav")
 
     shoot_sound = Utility.load_sound("car_door.wav")
+
+
 
     while (player.alive() is True):
 
@@ -140,8 +228,103 @@ def game_loop(all_game_rects, screen, background, shots, last_alien, aliens, bom
 
             Alien(SCREENRECT)
 
-        if last_alien and not int(random.random() * BOMB_ODDS):
-            Bomb(last_alien.sprite)
+        # todo: drop bomb at different altitudes
+        last_alien = aliens.sprites()[-1]
+        first_alien = aliens.sprites()[0]
+
+        if len(aliens.sprites()) > 1:
+            second_alien = aliens.sprites()[1]
+        
+        if len(aliens.sprites()) > 2:
+            third_alien = aliens.sprites()[2]
+
+        if len(aliens.sprites()) > 3:
+            fourth_alien = aliens.sprites()[3]
+
+        if len(aliens.sprites()) > 4:
+            fifth_alien = aliens.sprites()[4]
+        
+        if len(aliens.sprites()) > 5:
+            sixth_alien = aliens.sprites()[5]
+          
+           if GameLevel.level == 2:
+            if last_alien is not None and last_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(last_alien)
+
+        if GameLevel.level == 3:
+            if last_alien is not None and last_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(last_alien)
+
+        if GameLevel.level == 4:
+            if last_alien is not None and last_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(last_alien)
+
+        if GameLevel.level == 5:
+            if sixth_alien is not None and sixth_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(sixth_alien)
+
+        if GameLevel.level == 6:
+            if sixth_alien is not None and sixth_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(sixth_alien)
+
+        if GameLevel.level == 7:
+            if sixth_alien is not None and sixth_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(sixth_alien) 
+
+        if GameLevel.level == 8:
+            if sixth_alien is not None and sixth_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(sixth_alien)
+
+        if GameLevel.level == 9:
+            if sixth_alien is not None and sixth_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(sixth_alien)
+
+        if GameLevel.level == 10:
+            if fifth_alien is not None and fifth_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(fifth_alien)
+
+        if GameLevel.level == 11:
+            if fifth_alien is not None and fifth_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(fifth_alien)
+
+        if GameLevel.level == 12:
+            if fourth_alien is not None and fourth_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(fourth_alien)
+ 
+        if GameLevel.level == 13:
+            if fourth_alien is not None and fourth_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(fourth_alien)
+
+        if GameLevel.level == 14:
+            if fourth_alien is not None and fourth_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(fourth_alien)
+
+        if GameLevel.level == 15:
+            if third_alien is not None and third_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(third_alien)
+
+        if GameLevel.level == 16:
+            if third_alien is not None and third_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(third_alien)
+
+        if GameLevel.level == 17:
+            if second_alien is not None and second_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(second_alien)
+
+        if GameLevel.level == 18:
+            if second_alien is not None and second_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(second_alien)
+
+        if GameLevel.level == 19:
+            if second_alien is not None and second_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(second_alien)
+
+        if GameLevel.level == 20:
+            if first_alien is not None and first_alien.rect.y > 50 and not int(random.random() * BOMB_ODDS):
+                Bomb(first_alien)
+
+        
+
 
         detect_collisions(player, aliens, shots, bombs, boom_sound)
 
@@ -149,6 +332,8 @@ def game_loop(all_game_rects, screen, background, shots, last_alien, aliens, bom
         pygame.display.update(is_dirty)
 
         clock.tick(40)
+
+    return clock
 
 def check_player_life(player):
     if (PlayerLives.lives < 1):
